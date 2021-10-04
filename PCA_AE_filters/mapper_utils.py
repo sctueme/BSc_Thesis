@@ -40,18 +40,16 @@ def get_entropy(node_elements, X, y):
     
     return entropies, sizes
 
-def call_mapper(X, y, rs=rs, eps = 0.25, min_samples = 5, n_intervals = 10, overlap_frac = 0.25, n_components = 2, lense = 'autoencoder'):
+def call_mapper(X, y, rs=rs, eps = 0.25, min_samples = 5, n_intervals = 10, overlap_frac = 0.25, lense = None):
     '''
     Build a mapper with given hyperparameters and return the graph object, the datapoints at each node, 
     the node id's and the entropies and sizes.
     '''
     xy = pd.concat((X,y),axis=1)
     
-    if lense == 'pca':
-        filter_func = PCA(n_components = n_components, random_state = rs)
-    else:
-        filter_func = Projection(columns = ['P1','P2'])
-    
+    filter_func = lense
+
+
     # Define cover
     cover = CubicalCover(n_intervals=n_intervals, overlap_frac = overlap_frac)
     
@@ -82,7 +80,7 @@ def call_mapper(X, y, rs=rs, eps = 0.25, min_samples = 5, n_intervals = 10, over
         
     return graph, node_elements, node_ids, entropies, sizes
 
-def get_mappers(param_grid, X_m, y_m, rs=1):
+def get_mappers(param_grid, X_m, y_m, rs=1, lense = 'None'):
     '''
     Build all the mappers for a given grid of hyperparameter combinations (one mapper per each combination in the grid)
     Returns a dataframe with the relevant information of the experiment (average size of the nodes of each mapper, average entropy,
@@ -93,7 +91,6 @@ def get_mappers(param_grid, X_m, y_m, rs=1):
     minsamples = []
     interval_number = []
     overlap_fractions = []
-    ncomponents = []
     #Entropy
     avg_entropy = []
     std_entropy = []
@@ -103,13 +100,12 @@ def get_mappers(param_grid, X_m, y_m, rs=1):
 
     for grid in param_grid:
     
-        graph, node_elements, node_ids, entropies, sizes = call_mapper(X = X_m, y = y_m, rs = 1, **grid)
+        graph, node_elements, node_ids, entropies, sizes = call_mapper(X = X_m, y = y_m, rs = 1, lense = lense, **grid)
     
         epsilon.append(grid['eps'])
         minsamples.append(grid['min_samples'])
         interval_number.append(grid['n_intervals'])
         overlap_fractions.append(grid['overlap_frac'])
-        ncomponents.append(grid['n_components'])
     
         avg_entropy.append(np.mean(entropies))
         std_entropy.append(np.std(entropies))
@@ -122,7 +118,6 @@ def get_mappers(param_grid, X_m, y_m, rs=1):
     Mapper_Info['MINSamples'] = minsamples
     Mapper_Info['Number of Intervals'] = interval_number
     Mapper_Info['Percentage of Overlap'] = overlap_fractions
-    Mapper_Info['N Components'] = ncomponents
     Mapper_Info['Average Node Entropy'] = avg_entropy
     Mapper_Info['Entropy Standard Deviation'] = std_entropy
     Mapper_Info['Average Node Size'] = avg_node_sizes
